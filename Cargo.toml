@@ -1,0 +1,32 @@
+[package]
+name = "pingora-proxy-delegate"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85.1"
+description = "Proc-macro that generates ProxyHttp delegation boilerplate for Pingora decorator patterns"
+license = "MIT OR Apache-2.0"
+documentation = "https://docs.rs/pingora-proxy-delegate"
+homepage = "https://github.com/gcoady/pingora-proxy-delegate"
+repository = "https://github.com/gcoady/pingora-proxy-delegate"
+keywords = ["pingora", "proc-macro", "delegation"]
+categories = ["development-tools::procedural-macro-helpers"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["full"] }
+quote = "1"
+proc-macro2 = "1"
+
+[dev-dependencies]
+trybuild = "1"
+async-trait = "0.1"
+pingora-proxy = "0.8"
+pingora-core = "0.8"
+pingora-cache = "0.8"
+pingora-http = "0.8"
+bytes = "1"
+http = "1"
+tokio = "1"
+

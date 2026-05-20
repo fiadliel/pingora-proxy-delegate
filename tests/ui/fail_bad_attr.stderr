@@ -1,0 +1,5 @@
+error: expected a field access like `self.inner`
+ --> tests/ui/fail_bad_attr.rs:7:23
+  |
+7 | #[proxy_http_delegate(42)]
+  |                       ^^

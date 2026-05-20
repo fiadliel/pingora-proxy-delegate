@@ -1,0 +1,5 @@
+error: proxy_http_delegate can only be applied to a `ProxyHttp` impl
+  --> tests/ui/fail_not_proxy_http.rs:10:23
+   |
+10 | impl NotProxyHttp for Wrapper {}
+   |                       ^^^^^^^

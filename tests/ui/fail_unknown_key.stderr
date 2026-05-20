@@ -1,0 +1,5 @@
+error: expected `ctx` or `lint`
+ --> tests/ui/fail_unknown_key.rs:7:35
+  |
+7 | #[proxy_http_delegate(self.inner, foo = bar)]
+  |                                   ^^^
