@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Check newest compatible Pingora release
+        run: cargo update -p pingora-proxy
+      - run: cargo fmt --all -- --check
+      - run: cargo test --workspace --all-targets
+      # The router alone builds Pingora without `upstream_modules`; the
+      # workspace's dev-dependencies would otherwise enable it.
+      - run: cargo test -p pingora-proxy-router --all-targets --no-default-features
+      # Dependency feature unification must not bypass the router's own feature.
+      - name: Reject upstream modules enabled only on dependencies
+        shell: bash
+        run: |
+          if output=$(cargo check -p pingora-proxy-router --lib --no-default-features \
+            --features pingora-proxy-delegate/upstream_modules,pingora-proxy/upstream_modules 2>&1); then
+            printf '%s\n' "$output"
+            echo 'Expected the router feature mismatch to fail compilation'
+            exit 1
+          fi
+          printf '%s\n' "$output"
+          [[ "$output" == *"enable pingora-proxy-router's \`upstream_modules\` feature"* ]]
+      # With Pingora's feature on, this checks that the mismatch is rejected.
+      - run: cargo test -p pingora-proxy-delegate --all-targets --no-default-features
+      - run: cargo test --workspace --doc
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  msrv:
+    name: Minimum Rust version (1.85.1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.1
+      # Keep the committed dependency versions and compile tests without
+      # running trybuild's compiler-version-specific diagnostic snapshots.
+      - run: cargo check --workspace --all-targets --all-features --locked
+      # Check the feature-disabled router separately to avoid enabling
+      # Pingora's upstream modules through workspace dev-dependencies.
+      - run: cargo check -p pingora-proxy-router --lib --no-default-features --locked
+      - run: cargo check -p pingora-proxy-delegate --lib --no-default-features --locked
+
+  # rustfmt.nightly.toml holds unstable options, which stable rustfmt ignores;
+  # the stable check above only guarantees stable accepts the formatting.
+  fmt-nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check --config-path rustfmt.nightly.toml

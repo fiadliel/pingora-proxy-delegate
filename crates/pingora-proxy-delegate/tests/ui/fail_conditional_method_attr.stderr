@@ -1,0 +1,5 @@
+error: conditional methods are not supported by `proxy_http_delegate`: disabling this method could silently use Pingora's default instead of delegating; move conditional logic into the method body, or conditionally compile the entire impl
+  --> tests/ui/fail_conditional_method_attr.rs:10:5
+   |
+10 |     #[cfg_attr(all(), allow(dead_code))]
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

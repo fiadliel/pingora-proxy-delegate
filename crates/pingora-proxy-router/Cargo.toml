@@ -1,0 +1,40 @@
+[package]
+name = "pingora-proxy-router"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "Request routing and context lenses for composable Pingora ProxyHttp implementations"
+license.workspace = true
+documentation = "https://docs.rs/pingora-proxy-router"
+readme = "README.md"
+repository.workspace = true
+keywords = ["pingora", "proxy", "routing", "middleware"]
+categories = ["network-programming", "web-programming"]
+
+[dependencies]
+async-trait.workspace = true
+pingora-core.workspace = true
+pingora-proxy.workspace = true
+# Default features off so this crate's `upstream_modules` feature can be
+# disabled. The delegate crate's feature, unified across the graph, decides
+# which hooks are forwarded, and fails to compile if it mismatches Pingora's.
+pingora-proxy-delegate = { version = "0.2", path = "../pingora-proxy-delegate", default-features = false }
+
+# Referenced by code generated from Pingora's complete ProxyHttp surface.
+bytes.workspace = true
+http.workspace = true
+pingora-cache.workspace = true
+pingora-http.workspace = true
+tokio = { workspace = true, features = ["sync"] }
+
+[features]
+default = ["upstream_modules"]
+# Forward Pingora's upstream-module hooks and configure the server-wide
+# upstream module registry with `Router::with_upstream_modules`.
+upstream_modules = [
+    "pingora-proxy/upstream_modules",
+    "pingora-proxy-delegate/upstream_modules",
+]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt", "io-util"] }

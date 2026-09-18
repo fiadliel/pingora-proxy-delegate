@@ -11,30 +11,30 @@ impl ProxyHttp for Inner {
 
     async fn upstream_peer(
         &self,
-        _session: &mut pingora_proxy::Session,
-        _ctx: &mut Self::CTX,
+        _: &mut pingora_proxy::Session,
+        _: &mut Self::CTX,
     ) -> pingora_core::Result<Box<pingora_core::upstreams::peer::HttpPeer>> {
         unimplemented!()
     }
-}
-
-struct WrapperCtx {
-    inner: (),
 }
 
 struct Wrapper {
     inner: Inner,
 }
 
-#[proxy_http_delegate(self.inner, ctx = ctx.inner)]
+#[cfg(all())]
+#[proxy_http_delegate(self.inner)]
 impl ProxyHttp for Wrapper {
-    type CTX = WrapperCtx;
-
-    fn new_ctx(&self) -> Self::CTX {
-        WrapperCtx {
-            inner: self.inner.new_ctx(),
-        }
-    }
+    type CTX = ();
 }
 
-fn main() {}
+#[cfg(not(all()))]
+#[proxy_http_delegate(self.inner)]
+impl ProxyHttp for Wrapper {
+    type CTX = ();
+}
+
+fn main() {
+    let wrapper = Wrapper { inner: Inner };
+    wrapper.new_ctx();
+}

@@ -1,0 +1,27 @@
+error[E0034]: multiple applicable items in scope
+  --> tests/ui/fail_upstream_modules_mismatch.rs:27:1
+   |
+27 | #[proxy_http_delegate(self.inner)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ multiple `init_upstream_modules` found
+   |
+note: candidate #1 is defined in the trait `EnableUpstreamModulesFeatureOfPingoraProxyDelegate`
+  --> tests/ui/fail_upstream_modules_mismatch.rs:27:1
+   |
+27 | #[proxy_http_delegate(self.inner)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in the trait `ProxyHttp`
+  --> $CARGO/pingora-proxy-$VERSION/src/proxy_trait.rs
+   |
+   |     fn init_upstream_modules(&self, _modules: &mut HttpModules) {}
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: this error originates in the attribute macro `proxy_http_delegate` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: disambiguate the method for candidate #1
+   |
+27 - #[proxy_http_delegate(self.inner)]
+27 + EnableUpstreamModulesFeatureOfPingoraProxyDelegate::init_upstream_modules(&#[proxy_http_delegate(self.inner)], #[proxy_http_delegate(self.inner)])
+   |
+help: disambiguate the method for candidate #2
+   |
+27 - #[proxy_http_delegate(self.inner)]
+27 + ProxyHttp::init_upstream_modules(&#[proxy_http_delegate(self.inner)], #[proxy_http_delegate(self.inner)])
+   |

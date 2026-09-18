@@ -1,118 +1,48 @@
-<!-- cargo-reedme: start -->
+# Pingora proxy composition
 
-<!-- cargo-reedme: info-start
+Two crates for composing Pingora 0.9 `ProxyHttp` implementations while preserving
+one application-owned request context:
 
-    Do not edit this region by hand
-    ===============================
+| Crate | Purpose |
+| --- | --- |
+| [pingora-proxy-delegate](crates/pingora-proxy-delegate/README.md) | Generates forwarding hooks for decorators, with explicit overrides for their own behavior. |
+| [pingora-proxy-router](crates/pingora-proxy-router/README.md) | Selects and pins routes per request, and provides context lenses for component state. |
 
-    This region was generated from Rust documentation comments by `cargo-reedme` using this command:
+See each crate's README for usage, dependencies, and feature configuration.
 
-        cargo +nightly reedme
+## Development
 
-    for more info: https://github.com/nik-rev/cargo-reedme
+The repository root is a virtual Cargo workspace. Both crates live under
+`crates/` and share the root lockfile, CI, and formatting configuration.
+The minimum supported Rust version is 1.85.1.
 
-cargo-reedme: info-end -->
-
-Middleware layers for Pingora’s `ProxyHttp` trait.
-
-Pingora’s `ProxyHttp` trait has ~40 methods and no built-in middleware or
-layer system. A single monolithic impl handles all concerns. Concerns that
-span multiple phases (e.g. auth touches `request_filter`,
-`upstream_request_filter`, and `logging`) are split across methods shared
-with unrelated logic.
-
-Wrapping one `ProxyHttp` in another keeps each concern in one impl, but
-requires forwarding ~34 default methods. This crate generates them:
-
-```text
-#[proxy_http_delegate(self.inner)]
-impl<T: ProxyHttp> ProxyHttp for MyLayer<T> { ... }
+```sh
+cargo test --workspace --all-targets
+cargo test --workspace --doc
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo fmt --all -- --check
 ```
 
-# `#[proxy_http_delegate]`
+Use `-p pingora-proxy-delegate` or `-p pingora-proxy-router` to select one crate.
+Feature-disabled checks run separately because workspace dev-dependencies enable
+Pingora's upstream modules:
 
-Generates `self.<inner>.method(...)` delegations for every `ProxyHttp`
-method not already defined in the impl block.
-
-Also emits `#[async_trait]` and `#[deny(clippy::missing_trait_methods)]` on
-the impl — do not add these yourself.
-
-## Syntax
-
-```rust
-#[proxy_http_delegate(self.inner)]                  // lint defaults to deny
-#[proxy_http_delegate(self.inner, lint = warn)]     // downgrade to warning
-#[proxy_http_delegate(self.inner, lint = allow)]    // silence the lint
-#[proxy_http_delegate(self.inner, lint = deny)]     // explicit deny (default)
-#[proxy_http_delegate(self.inner, ctx = ctx.inner)] // map context for delegation
+```sh
+cargo test -p pingora-proxy-router --all-targets --no-default-features
+cargo test -p pingora-proxy-delegate --all-targets --no-default-features
 ```
 
-The `lint` option controls the `clippy::missing_trait_methods` lint level
-emitted on the impl block. It accepts `deny` (default), `warn`, or `allow`.
+The second command verifies that mismatched upstream-module features produce a
+compile error. Run `mise run fmt` to apply the nightly formatting configuration.
 
-The `ctx` option remaps the context passed to the inner delegate. When set,
-delegation calls pass the mapped expression (e.g. `&mut ctx.inner`) instead
-of `ctx` directly. The `new_ctx` delegation is not generated — you must
-define it yourself. This is useful when your layer has its own context type
-that wraps the inner context.
+Crate READMEs are generated from their Rust documentation:
 
-## Example
-
-```rust
-use pingora_core::prelude::*;
-use pingora_proxy::{ProxyHttp, Session};
-use pingora_proxy_delegate::proxy_http_delegate;
-
-struct InnerProxy;
-
-#[async_trait::async_trait]
-impl ProxyHttp for InnerProxy {
-    type CTX = ();
-
-    fn new_ctx(&self) -> Self::CTX {
-        todo!()
-    }
-    async fn upstream_peer(
-        &self,
-        _: &mut pingora_proxy::Session,
-        _: &mut Self::CTX,
-    ) -> Result<Box<HttpPeer>, Box<pingora_core::Error>> {
-        todo!()
-    }
-}
-
-struct MyDecorator<Inner> {
-    inner: Inner,
-}
-
-#[proxy_http_delegate(self.inner)]
-impl<Inner> ProxyHttp for MyDecorator<Inner>
-where
-    Inner: ProxyHttp + Send + Sync,
-    Inner::CTX: Default + Send + Sync + 'static,
-{
-    type CTX = Inner::CTX;
-
-    async fn logging(
-        &self,
-        session: &mut Session,
-        error: Option<&pingora_core::Error>,
-        ctx: &mut Self::CTX,
-    ) where
-        Self::CTX: Send + Sync,
-    {
-        self.inner.logging(session, error, ctx).await;
-        // your logic here
-    }
-}
+```sh
+cargo +nightly reedme -p pingora-proxy-delegate
+cargo +nightly reedme -p pingora-proxy-router
 ```
 
-Layers nest: `MyDecorator<AuthLayer<RateLimitLayer<CoreProxy>>>`.
+## License
 
-## Compatibility
-
-Targets Pingora 0.8. If Pingora adds a new trait method the
-`missing_trait_methods` deny will surface a compile error — update this
-crate’s method list and re-release.
-
-<!-- cargo-reedme: end -->
+MIT OR Apache-2.0; see [LICENSE-MIT](LICENSE-MIT) and
+[LICENSE-APACHE](LICENSE-APACHE).
